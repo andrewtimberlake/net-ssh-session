@@ -41,12 +41,18 @@ module Net
 
       # Establish connection with remote server
       # @param [Integer] max timeout in seconds
+      # @param [Hash] options to be passed to Net::SSH session
       # @return [Boolean]
-      def open(timeout=nil)
+      def open(timeout=nil, options={})
+        if timeout.is_a?(Hash)
+          options = timeout
+          timeout = nil
+        end
+
         if timeout && timeout > 0
-          with_timeout(timeout) { establish_connection }
+          with_timeout(timeout) { establish_connection(options) }
         else
-          establish_connection
+          establish_connection(options)
         end
       end
 
@@ -96,7 +102,7 @@ module Net
         t_end = Time.now
 
         cmd = SessionCommand.new(
-          command, output, exit_code, 
+          command, output, exit_code,
           t_end - t_start
         )
 
@@ -116,7 +122,7 @@ module Net
       # @param [Array] set of commands to execute
       # @param [Hash] execution options
       # @return [Array] set of command execution results
-      # 
+      #
       # Execution options are the following:
       # options[:break] - If set to `true`, execution chain will break on first failed command
       #
@@ -154,11 +160,11 @@ module Net
 
       private
 
-      def establish_connection
+      def establish_connection(options={})
         opts = {
           :password => @password,
           :port     => @port
-        }
+        }.merge(options)
 
         @connection = Net::SSH.start(host, user, opts)
         @shell = @connection.shell
